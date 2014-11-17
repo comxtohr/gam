@@ -21,6 +21,9 @@ from PyQt4 import QtCore
 class clwiMail (QtGui.QWidget):
   def __init__ (self, parent = None):
     super(clwiMail, self).__init__(parent)
+    self.initUI()
+  
+  def initUI(self):
     self.layout = QtGui.QGridLayout()
 
     self.lblSend = QtGui.QLabel()
@@ -63,6 +66,9 @@ class clwiMail (QtGui.QWidget):
 class clwiAttach (QtGui.QWidget):
   def __init__ (self, parent = None):
     super(clwiAttach, self).__init__(parent)
+    self.initUI()
+
+  def initUI(self):
     self.layout = QtGui.QGridLayout()
 
     self.lblSend = QtGui.QLabel()
@@ -96,65 +102,75 @@ class clwiAttach (QtGui.QWidget):
   def setSnippet(self, snippet):
    self.lblSnippet.setText(snippet)
 
-app = QtGui.QApplication(sys.argv)
-app.setApplicationName('Gmail Attachment Manager')
-winMain = QtGui.QWidget()
-winMain.setFixedSize(800,600)
-winMain.move(300,300)
-winMain.setWindowTitle('Gmail Attachment Manager')
+###################################
 
-btnMails = QtGui.QPushButton('Mails', winMain)
-btnAttachs = QtGui.QPushButton('Attachments', winMain)
-btnNewMail = QtGui.QPushButton('New', winMain)
-btnTrash = QtGui.QPushButton('Trash', winMain)
-btnRefresh = QtGui.QPushButton('Refresh', winMain)
-btnSearch = QtGui.QPushButton('Search', winMain)
-leSerach = QtGui.QLineEdit(winMain)
-cmbSearch = QtGui.QComboBox(winMain)
-cmbSearch.addItem('Mail')
-cmbSearch.addItem('Attachment')
+class GUIMain(QtGui.QWidget):
+  def __init__(self):
+    super(GUIMain, self).__init__()
+    self.initUI()
 
-lwgtMain = QtGui.QListWidget(winMain)
-lwgtMain.setStyleSheet('''QListWidget::item:selected{color:black;background-color:rgb(233,233,233);}
-                          QListWidget::item { border-bottom: 1px solid rgb(233,233,233); }''')
-for send, time, subj, snippet, names in [('send1', 'time1',  'subj1', 'snippet1',['attach1']),
-                                  ('send2', 'time2',  'subj2', 'snippet2',[]),
-                                  ('send3', 'time3',  'subj3', 'snippet3',['attach1','attach2','attach3'])]:
-  lwiMail = clwiMail()
-  lwiMail.setSend(send)
-  lwiMail.setTime(time)
-  lwiMail.setSubj(subj)
-  lwiMail.setSnippet(snippet)
-  lwiMail.setAttach(names)
+  def initUI(self):
+    self.setFixedSize(800,600)
+    self.move(300,300)
+    self.setWindowTitle('Gmail Attachment Manager')
+
+    btnMails = QtGui.QPushButton('Mails', self)
+    btnAttachs = QtGui.QPushButton('Attachments', self)
+    btnNewMail = QtGui.QPushButton('New', self)
+    btnTrash = QtGui.QPushButton('Trash', self)
+    btnRefresh = QtGui.QPushButton('Refresh', self)
+    btnSearch = QtGui.QPushButton('Search', self)
+    leSerach = QtGui.QLineEdit(self)
+    cmbSearch = QtGui.QComboBox(self)
+    cmbSearch.addItem('Mail')
+    cmbSearch.addItem('Attachment')
+
+    lwgtMain = QtGui.QListWidget(self)
+
+    lwgtMain.setStyleSheet('''QListWidget::item:selected{color:black;background-color:rgb(233,233,233);}
+                              QListWidget::item { border-bottom: 1px solid rgb(233,233,233); }''')
+    ##
+    for send, time, subj, snippet, names in [('send1', 'time1',  'subj1', 'snippet1',['attach1']),
+                                             ('send2', 'time2',  'subj2', 'snippet2',[]),
+                                             ('send3', 'time3',  'subj3', 'snippet3',['attach1','attach2','attach3'])]:
+      lwiMail = clwiMail()
+      lwiMail.setSend(send)
+      lwiMail.setTime(time)
+      lwiMail.setSubj(subj)
+      lwiMail.setSnippet(snippet)
+      lwiMail.setAttach(names)
   
-  
-  lwgtItem = QtGui.QListWidgetItem(lwgtMain)
+      lwgtItem = QtGui.QListWidgetItem(lwgtMain)
+      lwgtItem.setSizeHint(lwiMail.sizeHint())
+      lwgtMain.addItem(lwgtItem)
+      lwgtMain.setItemWidget(lwgtItem,lwiMail)
 
-  lwgtItem.setSizeHint(lwiMail.sizeHint())
+    btnMails.resize(100,35)
+    btnAttachs.resize(100,35)
+    btnNewMail.resize(80,35)
+    btnTrash.resize(80,35)
+    btnRefresh.resize(80,35)
+    btnSearch.resize(80,35)
+    leSerach.resize(160,20)
+    cmbSearch.resize(100,25)
+    lwgtMain.resize(800,560)
 
-  lwgtMain.addItem(lwgtItem)
-  lwgtMain.setItemWidget(lwgtItem,lwiMail)
+    btnMails.move(0,0)
+    btnAttachs.move(100,0)
+    btnNewMail.move(220, 0)
+    btnTrash.move(300, 0)
+    btnRefresh.move(380,0)
+    btnSearch.move(720, 0)
+    leSerach.move(460,5)
+    cmbSearch.move(620,2)
+    lwgtMain.move(0,40)
 
+    self.show()
 
-btnMails.resize(100,35)
-btnAttachs.resize(100,35)
-btnNewMail.resize(80,35)
-btnTrash.resize(80,35)
-btnRefresh.resize(80,35)
-btnSearch.resize(80,35)
-leSerach.resize(160,20)
-cmbSearch.resize(100,25)
-lwgtMain.resize(800,560)
+def main():
+  app = QtGui.QApplication(sys.argv)
+  winMain = GUIMain()
+  sys.exit(app.exec_())
 
-btnMails.move(0,0)
-btnAttachs.move(100,0)
-btnNewMail.move(220, 0)
-btnTrash.move(300, 0)
-btnRefresh.move(380,0)
-btnSearch.move(720, 0)
-leSerach.move(460,5)
-cmbSearch.move(620,2)
-lwgtMain.move(0,40)
-
-winMain.show()
-sys.exit(app.exec_())
+if __name__ == '__main__':
+  main()
