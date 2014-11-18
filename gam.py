@@ -25,11 +25,11 @@ from PyQt4 import QtGui
 from PyQt4 import QtCore
 
 class GAM:
-  CLIENT_SECRET_FILE = 'client_secret.json'
-  OAUTH_SCOPE = 'https://mail.google.com/'
-  STORAGE = Storage('gmail.storage')
-  service = 0
   def __init__(self):
+    self.CLIENT_SECRET_FILE = 'client_secret.json'
+    self.OAUTH_SCOPE = 'https://mail.google.com/'
+    self.STORAGE = Storage('gmail.storage')
+  
     flow = flow_from_clientsecrets(self.CLIENT_SECRET_FILE, scope=self.OAUTH_SCOPE)
     http = httplib2.Http()
 
@@ -42,6 +42,8 @@ class GAM:
 
     print "CONNECT SUCCESS"
     print "INITIALIZE"
+    self.profile = self.service.users().getProfile(userId = 'me').execute()
+    print 'GET PROFILE'
     self.refresh()
 
   def progress(self, width, percent):
@@ -122,7 +124,7 @@ class GAM:
       else:
         print 'TOKEN: REACH TAIL'
         break;
-    
+
     toremove = []
     for item in self.maillist:
       if item['id'] not in idlist_server:
@@ -635,7 +637,7 @@ class GUINewMail(QtGui.QWidget):
     self.setWindowTitle('New Mail')
 
     self.lblFrom = QtGui.QLabel('From:', self)
-    self.lblUserAddress = QtGui.QLabel('somhtong@gmail.com', self)
+    self.lblUserAddress = QtGui.QLabel(self.gam.profile['emailAddress'], self)
     self.lblTo = QtGui.QLabel('To:', self)
     self.lblSubj = QtGui.QLabel('Subject:', self)
     self.lblAttach = QtGui.QLabel('Attach:',self)
@@ -666,6 +668,7 @@ class GUINewMail(QtGui.QWidget):
     self.btnSelect.move(650,90)
 
     self.btnSend.clicked.connect(self.actSend)
+    #self.btnSelect.clicked.connect(self.actSelect)
   
   def actSend(self):
     tfrom = str(self.lblFrom.text().toUtf8())
@@ -686,6 +689,13 @@ class GUINewMail(QtGui.QWidget):
       self.teContent.setText('')
       self.close()
 
+  #def actSelect(self):
+  #  dlgSelect = GUISelect(self.gam, parent = self)
+  #  if dlgSelect.exec_():
+  #    if self.leAttach.text().toUtf8 == '':
+  #      self.leAttach.setText(str(dlgSelect.filename()) + '@' + str(dlgSelect.mailid()))
+  #    else:
+  #      self.leAttach.setText(str(self.leAttach.text().toUtf8) + '|' + str(dlgSelect.filename()) + '@' + str(dlgSelect.mailid()))
 
 ###################################
 
