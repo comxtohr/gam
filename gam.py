@@ -41,7 +41,6 @@ class GAM:
     self.service = build('gmail', 'v1', http=http)
 
     print "CONNECT SUCCESS"
-    self.maillist = []
     print "INITIALIZE"
     self.refresh()
 
@@ -90,6 +89,7 @@ class GAM:
       self.maillist.append({'id' : lID, 'from' : lFrom, 'to' : lTo, 'subject' : lSubject,'date' : lDate, 'snippet' : lSnippet, 'attach' : attach})  
 
   def refresh(self):
+    self.maillist = []
     idlist_json = []
     idlist_server = []
     try:
@@ -123,10 +123,15 @@ class GAM:
         print 'TOKEN: REACH TAIL'
         break;
     
+    toremove = []
     for item in self.maillist:
       if item['id'] not in idlist_server:
-        self.maillist.remove(item)   
+        toremove.append(item)
 
+    for item in toremove:
+        idlist_json.remove(item['id'])
+        self.maillist.remove(item)
+        
     #multithread
     threads = []
     STORAGE_THREADS = []
@@ -157,7 +162,9 @@ class GAM:
         if len(self.maillist) == len(idlist_server):
           self.progress(50,100 * len(self.maillist) / len(idlist_server))
           break
-    print  
+    print
+
+    
 
     self.maillist = sorted(self.maillist,key=lambda mail: idlist_server.index(mail['id']))  
 
@@ -285,22 +292,22 @@ class GAM:
     print 'NOT FOUND'  
 
   def newMail(self, lFrom, lTo, lSubject, lText):
-    message = MIMEText(lText)
-    message['From'] = lFrom
-    message['To'] = lTo
-    message['Subject'] = lSubject
+    message = MIMEText(lText.decode('utf-8'), 'plain', 'utf-8')
+    message['From'] = lFrom.decode('utf-8')
+    message['To'] = lTo.decode('utf-8')
+    message['Subject'] = lSubject.decode('utf-8')
     return {'raw': base64.b64encode(message.as_string())}  
 
   def newMailWithNewAttach(self, lFrom, lTo, lSubject, lText, lDir, lName):
     message = MIMEMultipart()
-    message['From'] = lFrom
-    message['To'] = lTo
-    message['Subject'] = lSubject  
+    message['From'] = lFrom.decode('utf-8')
+    message['To'] = lTo.decode('utf-8')
+    message['Subject'] = lSubject.decode('utf-8')
 
-    msg = MIMEText(lText)
+    msg = MIMEText(lText.decode('utf-8'), 'plain', 'utf-8')
     message.attach(msg)  
 
-    path = os.path.join(lDir, lName)
+    path = os.path.join(lDir.decode('utf-8'), lName.decode('utf-8'))
     content_type, encoding = mimetypes.guess_type(path)  
 
     if content_type is None or encoding is not None:
@@ -325,42 +332,108 @@ class GAM:
       fp.close()  
 
     msg.add_header('Content-Disposition', 'attachment', filename=lName)
-    message.attach(msg)  
+    message.attach(msg)
 
     return {'raw': base64.urlsafe_b64encode(message.as_string())}  
 
-  def newMailWithAttach(self, lFrom, lTo, lSubject, lText, lName):
+  def newMailWithAttach(self, lFrom, lTo, lSubject, lText, lMailId, lName):
     data = ""
     for msg in self.maillist:
-      for attach in msg['attach']:
-        if attach['filename'] == lName:
-          attachment = self.service.users().messages().attachments().get(userId='me',messageId=msg['id'],id=attach['attachId']).execute()
-          data = base64.urlsafe_b64decode(attachment['data'].encode('utf-8'))
-          message = MIMEMultipart()
-          message['From'] = lFrom
-          message['To'] = lTo
-          message['Subject'] = lSubject  
+      if msg['id'] == lMailId.decode('utf-8'):
+        for attach in msg['attach']:
+          if attach['filename'] == lName.decode('utf-8'):
+            attachment = self.service.users().messages().attachments().get(userId='me',messageId=msg['id'],id=attach['attachId']).execute()
+            data = base64.urlsafe_b64decode(attachment['data'].encode('utf-8'))
+            message = MIMEMultipart()
+            message['From'] = lFrom.decode('utf-8')
+            message['To'] = lTo.decode('utf-8')
+            message['Subject'] = lSubject.decode('utf-8')
 
-          msg = MIMEText(lText)
-          message.attach(msg)  
+            msg = MIMEText(lText.decode('utf-8'), 'plain', 'utf-8')
+            message.attach(msg)
 
-          content_type, encoding = mimetypes.guess_type(lName)  
+            content_type, encoding = mimetypes.guess_type(lName.decode('utf-8'))    
 
-          if content_type is None or encoding is not None:
-            content_type = 'application/octet-stream'
-          main_type, sub_type = content_type.split('/', 1)
-          if main_type == 'text' or main_type == 'image' or main_type == 'audio':
-            msg = MIMEText(data, _subtype=sub_type)
-          else:
-            msg = MIMEBase(main_type, sub_type)
-            msg.set_payload(data)  
+            if content_type is None or encoding is not None:
+              content_type = 'application/octet-stream'
+            main_type, sub_type = content_type.split('/', 1)
+            if main_type == 'text' or main_type == 'image' or main_type == 'audio':
+              msg = MIMEText(data, _subtype=sub_type)
+            else:
+              msg = MIMEBase(main_type, sub_type)
+              msg.set_payload(data)    
 
-          msg.add_header('Content-Disposition', 'attachment', filename=lName)
-          message.attach(msg)  
+            msg.add_header('Content-Disposition', 'attachment', filename=lName)
+            message.attach(msg)    
 
-          return {'raw': base64.urlsafe_b64encode(message.as_string())}  
+            return {'raw': base64.urlsafe_b64encode(message.as_string())}
 
-  def sendMail(message):
+  def newMailWithAttachs(self, lFrom, lTo, lSubject, lText, lAttachs):
+    message = MIMEMultipart()
+    message['From'] = lFrom.decode('utf-8')
+    message['To'] = lTo.decode('utf-8')
+    message['Subject'] = lSubject.decode('utf-8')
+
+    msg = MIMEText(lText.decode('utf-8'), 'plain', 'utf-8')
+    message.attach(msg)
+
+    for lAttach in lAttachs:
+      if lAttach[0:6] == 'local:':
+        lName, lDir = lAttach[6:].split('@')
+        print lName.decode('utf-8'), lDir.decode('utf-8')
+        path = os.path.join(lDir.decode('utf-8'), lName.decode('utf-8'))
+        content_type, encoding = mimetypes.guess_type(path)
+
+        if content_type is None or encoding is not None:
+          content_type = 'application/octet-stream'
+        main_type, sub_type = content_type.split('/', 1)
+        if main_type == 'text':
+          fp = open(path, 'rb')
+          msg = MIMEText(fp.read(), _subtype=sub_type)
+          fp.close()
+        elif main_type == 'image':
+          fp = open(path, 'rb')
+          msg = MIMEImage(fp.read(), _subtype=sub_type)
+          fp.close()
+        elif main_type == 'audio':
+          fp = open(path, 'rb')
+          msg = MIMEAudio(fp.read(), _subtype=sub_type)
+          fp.close()
+        else:
+          fp = open(path, 'rb')
+          msg = MIMEBase(main_type, sub_type)
+          msg.set_payload(fp.read())
+          fp.close()
+        msg.add_header('Content-Disposition', 'attachment', filename=lName)
+        message.attach(msg)
+
+      elif lAttach[0:6] == 'exist:':
+        lName, lMailId = lAttach[6:].split('@')
+        print lName.decode('utf-8'), lMailId.decode('utf-8')
+        data = ""
+        for msg in self.maillist:
+          if msg['id'] == lMailId.decode('utf-8'):
+            for attach in msg['attach']:
+              if attach['filename'] == lName.decode('utf-8'):
+                attachment = self.service.users().messages().attachments().get(userId='me',messageId=msg['id'],id=attach['attachId']).execute()
+                data = base64.urlsafe_b64decode(attachment['data'].encode('utf-8'))
+                content_type, encoding = mimetypes.guess_type(lName.decode('utf-8'))
+
+                if content_type is None or encoding is not None:
+                  content_type = 'application/octet-stream'
+                main_type, sub_type = content_type.split('/', 1)
+                if main_type == 'text' or main_type == 'image' or main_type == 'audio':
+                  msg = MIMEText(data, _subtype=sub_type)
+                else:
+                  msg = MIMEBase(main_type, sub_type)
+                  msg.set_payload(data)
+
+                msg.add_header('Content-Disposition', 'attachment', filename=lName)
+                message.attach(msg)
+
+    return {'raw': base64.urlsafe_b64encode(message.as_string())}
+
+  def sendMail(self, message):
     try:
       message = (self.service.users().messages().send(userId='me', body=message).execute())
       print 'Message Id: %s' % message['id']
@@ -548,12 +621,81 @@ class GUIShowMail(QtGui.QWidget):
       self.gam.getAttach(self.mailid, id)
 
 ###################################
+
+class GUINewMail(QtGui.QWidget):
+  
+  def __init__(self,gam):
+    super(GUINewMail, self).__init__()
+    self.gam = gam
+    self.initUI()
+
+  def initUI(self):
+    self.setFixedSize(800,600)
+    self.move(300,300)
+    self.setWindowTitle('New Mail')
+
+    self.lblFrom = QtGui.QLabel('From:', self)
+    self.lblUserAddress = QtGui.QLabel('somhtong@gmail.com', self)
+    self.lblTo = QtGui.QLabel('To:', self)
+    self.lblSubj = QtGui.QLabel('Subject:', self)
+    self.lblAttach = QtGui.QLabel('Attach:',self)
+    self.leTo = QtGui.QLineEdit(self)
+    self.leSubj = QtGui.QLineEdit(self)
+    self.leAttach = QtGui.QLineEdit(self)
+    self.teContent = QtGui.QTextEdit(self)
+    self.btnSend = QtGui.QPushButton('Send', self)
+    self.btnSelect = QtGui.QPushButton('Select From Existed', self)
+
+    self.leTo.resize(735,20)
+    self.leSubj.resize(735,20)
+    self.leAttach.resize(590,20)
+    self.teContent.resize(790,465)
+    self.btnSend.resize(80,35)
+    self.btnSelect.resize(150,35)
+
+    self.lblFrom.move(18,10)
+    self.lblUserAddress.move(62,10)
+    self.lblTo.move(34,40)
+    self.lblSubj.move(5,70)
+    self.lblAttach.move(11,100)
+    self.leTo.move(60,35)
+    self.leSubj.move(60,65)
+    self.leAttach.move(60,95)
+    self.teContent.move(5,130)
+    self.btnSend.move(720, 0)
+    self.btnSelect.move(650,90)
+
+    self.btnSend.clicked.connect(self.actSend)
+  
+  def actSend(self):
+    tfrom = str(self.lblFrom.text().toUtf8())
+    tto = str(self.leTo.text().toUtf8())
+    tsubj = str(self.leSubj.text().toUtf8())
+    tattach = str(self.leAttach.text().toUtf8())
+    tcontent = str(self.teContent.toPlainText().toUtf8())
+    if tto != '':
+      if tattach == '':
+        mail = self.gam.newMail(tfrom,tto,tsubj,tcontent)
+      else:
+        tattachs = tattach.split('|')
+        mail = self.gam.newMailWithAttachs(tfrom,tto,tsubj,tcontent,tattachs)
+      self.gam.sendMail(mail)
+      self.leTo.setText('')
+      self.leSubj.setText('')
+      self.leAttach.setText('')
+      self.teContent.setText('')
+      self.close()
+
+
+###################################
+
 class GUIMain(QtGui.QWidget):
   def __init__(self, gam):
     super(GUIMain, self).__init__()
     self.gam = gam
     self.initUI()
     self.winShow = GUIShowMail(gam)
+    self.winNew = GUINewMail(gam)
 
 
   def initUI(self):
@@ -602,6 +744,7 @@ class GUIMain(QtGui.QWidget):
 
     self.btnMails.clicked.connect(self.actMails)
     self.btnAttachs.clicked.connect(self.actAttachs)
+    self.btnNewMail.clicked.connect(self.actNew)
     self.btnRefresh.clicked.connect(self.actRefresh)
     self.btnTrash.clicked.connect(self.actTrash)
     self.btnSearch.clicked.connect(self.actSearch)
@@ -725,6 +868,9 @@ class GUIMain(QtGui.QWidget):
         id = self.lwgtMain.itemWidget(item).id
         mailid = self.lwgtMain.itemWidget(item).mailid
         self.gam.getAttach(mailid, id)
+
+  def actNew(self):
+    self.winNew.show()
 
 def main():
   gam = GAM()
