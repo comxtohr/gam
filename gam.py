@@ -195,6 +195,7 @@ class GAM:
   
 
   def showMail(self, lID):
+    ret = ''
     for msg in self.maillist:
       if msg['id'] == lID:
         self.printMail(msg)
@@ -204,8 +205,9 @@ class GAM:
         msg = message_from_string(msg_str)
         for part in msg.get_payload():
           if part.get_content_type() == 'text/plain':
+            ret = ret + part.get_payload(decode = True) + '\n'
             print part.get_payload(decode = True)
-        return
+        return ret
 
   def listMail(self):
     cmd = ''
@@ -489,13 +491,72 @@ class clwiAttach (QtGui.QWidget):
 
 ###################################
 
+class GUIShowMail(QtGui.QWidget):
+  
+  def __init__(self,gam):
+    super(GUIShowMail, self).__init__()
+    self.gam = gam
+    self.initUI()
+
+  def initUI(self):
+    self.setFixedSize(800,600)
+    self.move(300,300)
+    self.setWindowTitle('Show Mail')
+
+    self.lblFrom = QtGui.QLabel('From:', self)
+    self.lblTo = QtGui.QLabel('To:', self)
+    self.lblSubj = QtGui.QLabel('Subject:', self)
+    self.lblAttach = QtGui.QLabel('Attach:',self)
+    self.leFrom = QtGui.QLineEdit(self)
+    self.leTo = QtGui.QLineEdit(self)
+    self.leSubj = QtGui.QLineEdit(self)
+    self.leAttach = QtGui.QLineEdit(self)
+    self.teContent = QtGui.QTextEdit(self)
+    self.btnDownload = QtGui.QPushButton('Download Attachs', self)
+
+    self.leFrom.resize(735,20)
+    self.leTo.resize(735,20)
+    self.leSubj.resize(735,20)
+    self.leAttach.resize(590,20)
+    self.teContent.resize(790,465)
+    self.btnDownload.resize(150,35)
+
+    self.lblFrom.move(18,10)
+    self.leFrom.move(60,5)
+    self.lblTo.move(34,40)
+    self.lblSubj.move(5,70)
+    self.lblAttach.move(11,100)
+    self.leTo.move(60,35)
+    self.leSubj.move(60,65)
+    self.leAttach.move(60,95)
+    self.teContent.move(5,130)
+    self.btnDownload.move(650,90)
+
+    self.btnDownload.clicked.connect(self.actDownload)
+
+  def setmail(self, tfrom, tto, tsubj, tattach, tcontent, tmailid, tids):
+    self.mailid = tmailid
+    self.ids = tids
+    self.leFrom.setText(tfrom)
+    self.leTo.setText(tto)
+    self.leSubj.setText(tsubj)
+    self.leAttach.setText(tattach)
+    self.teContent.setText(tcontent)
+
+  def actDownload(self):
+    for id in self.ids:
+      self.gam.getAttach(self.mailid, id)
+
+###################################
 class GUIMain(QtGui.QWidget):
   def __init__(self, gam):
     super(GUIMain, self).__init__()
-    self.initUI(gam)
-
-  def initUI(self, gam):
     self.gam = gam
+    self.initUI()
+    self.winShow = GUIShowMail(gam)
+
+
+  def initUI(self):
     self.setFixedSize(800,600)
     self.move(300,300)
     self.setWindowTitle('Gmail Attachment Manager')
@@ -646,7 +707,20 @@ class GUIMain(QtGui.QWidget):
     for item in items:
       if isinstance(self.lwgtMain.itemWidget(item),clwiMail):
         id = self.lwgtMain.itemWidget(item).id
-        print id
+        for msg in self.gam.maillist:
+          if msg['id'] == id:
+            send = msg['from']
+            recv = msg['to']
+            subj = msg['subject']
+            attachs = ''
+            content = self.gam.showMail(id).decode('utf8')
+            attachids = []
+            for attach in msg['attach']:
+              attachs = attachs + attach['filename'] + ' '
+              attachids.append(attach['attachId'])
+            self.winShow.setmail(send,recv,subj,attachs,content,id,attachids)
+            self.winShow.show()
+            break
       elif isinstance(self.lwgtMain.itemWidget(item),clwiAttach):
         id = self.lwgtMain.itemWidget(item).id
         mailid = self.lwgtMain.itemWidget(item).mailid
