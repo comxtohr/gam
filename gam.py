@@ -1,3 +1,4 @@
+#!/usr/bin/python
 # -*- coding: utf-8 -*-
 import httplib2
 import json
@@ -35,7 +36,7 @@ class GAM:
 
     credentials = self.STORAGE.get()
     if credentials is None or credentials.invalid:
-      credentials = run(flow, STORAGE, http=http)
+      credentials = run(flow, self.STORAGE, http=http)
 
     http = credentials.authorize(http)
     self.service = build('gmail', 'v1', http=http)
