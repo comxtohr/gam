@@ -623,6 +623,93 @@ class GUIShowMail(QtGui.QWidget):
       self.gam.getAttach(self.mailid, id)
 
 ###################################
+class clwiSelect (QtGui.QWidget):
+  def __init__ (self, parent = None):
+    super(clwiSelect, self).__init__(parent)
+    self.initUI()
+
+  def initUI(self):
+    self.layout = QtGui.QGridLayout()
+
+    self.lblFilename = QtGui.QLabel()
+    self.lblSubj = QtGui.QLabel()
+        
+    self.layout.addWidget(self.lblFilename,0,0)
+    self.layout.addWidget(self.lblSubj,1,0)
+    
+    self.setLayout(self.layout)
+
+    self.lblFilename.setStyleSheet("color: rgb(80, 80, 80);")
+    self.lblSubj.setStyleSheet("color: rgb(175, 175, 175);")
+
+  def setMailid(self, mailid):
+    self.mailid = mailid
+    
+  def setFname(self, fname):
+    self.fname = fname
+    self.lblFilename.setText('<strong>' + fname + '</strong>')
+  
+  def setSubj(self, subj):
+    self.lblSubj.setText(((subj[0:30] + '...') if len(subj) > 30 else subj))
+  
+class GUISelect(QtGui.QDialog):
+  def __init__(self,gam,parent=None):
+    QtGui.QDialog.__init__(self)
+    self.gam = gam
+    self.initUI()
+
+  def initUI(self):
+    self.setFixedSize(560, 540)
+    self.setWindowTitle('Select Attachment')
+
+    self.lwgtList = QtGui.QListWidget(self)
+    self.bbxYesNo = QtGui.QDialogButtonBox(self)
+
+    self.lwgtList.setStyleSheet('''QListWidget::item:selected{color:black;background-color:rgb(233,233,233);}
+                              QListWidget::item { border-bottom: 1px solid rgb(233,233,233); }''')
+
+    for msg in self.gam.maillist:
+      for attach in msg['attach']:
+        fname = attach['filename']
+        mailid = msg['id']
+        subj = msg['subject']
+    
+        self.lwiSelect = clwiSelect()
+        self.lwiSelect.setMailid(mailid)
+        self.lwiSelect.setFname(fname)
+        self.lwiSelect.setSubj(subj)
+
+        self.lwgtItem = QtGui.QListWidgetItem(self.lwgtList)
+        self.lwgtItem.setSizeHint(self.lwiSelect.sizeHint())
+        self.lwgtList.addItem(self.lwgtItem)
+        self.lwgtList.setItemWidget(self.lwgtItem,self.lwiSelect)
+
+    self.lwgtList.move(5,5)
+    self.bbxYesNo.move(400,510)
+
+    self.lwgtList.resize(550,500)
+    self.bbxYesNo.resize(150,30)
+
+    self.bbxYesNo.setStandardButtons(QtGui.QDialogButtonBox.Ok|QtGui.QDialogButtonBox.Cancel)
+    
+    self.bbxYesNo.accepted.connect(self.actItem)
+    self.bbxYesNo.rejected.connect(self.reject)
+  
+  def actItem(self):
+    items = self.lwgtList.selectedItems()
+    for item in items:
+      self.fname = self.lwgtList.itemWidget(item).fname
+      self.mailid = self.lwgtList.itemWidget(item).mailid
+      break
+    print self.fname,self.mailid
+    self.accept()
+      
+  def fileName(self):
+    return self.fname
+   
+  def mailId(self):
+    return self.mailid
+###################################
 
 class GUINewMail(QtGui.QWidget):
   
@@ -668,7 +755,7 @@ class GUINewMail(QtGui.QWidget):
     self.btnSelect.move(650,90)
 
     self.btnSend.clicked.connect(self.actSend)
-    #self.btnSelect.clicked.connect(self.actSelect)
+    self.btnSelect.clicked.connect(self.actSelect)
   
   def actSend(self):
     tfrom = str(self.lblFrom.text().toUtf8())
@@ -689,13 +776,13 @@ class GUINewMail(QtGui.QWidget):
       self.teContent.setText('')
       self.close()
 
-  #def actSelect(self):
-  #  dlgSelect = GUISelect(self.gam, parent = self)
-  #  if dlgSelect.exec_():
-  #    if self.leAttach.text().toUtf8 == '':
-  #      self.leAttach.setText(str(dlgSelect.filename()) + '@' + str(dlgSelect.mailid()))
-  #    else:
-  #      self.leAttach.setText(str(self.leAttach.text().toUtf8) + '|' + str(dlgSelect.filename()) + '@' + str(dlgSelect.mailid()))
+  def actSelect(self):
+    self.dlgSelect = GUISelect(self.gam,self)
+    if self.dlgSelect.exec_():
+      if str(self.leAttach.text().toUtf8()) == '':
+        self.leAttach.setText('exist:' + self.dlgSelect.fileName() + '@' + self.dlgSelect.mailId())
+      else:
+        self.leAttach.setText(str(self.leAttach.text().toUtf8()).decode('utf-8') + '|exist:' + self.dlgSelect.fileName() + '@' + self.dlgSelect.mailId())
 
 ###################################
 
