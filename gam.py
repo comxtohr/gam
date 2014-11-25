@@ -1,6 +1,6 @@
 #!/usr/bin/python
 # -*- coding: utf-8 -*-
-import httplib2
+
 import json
 import base64
 import threading
@@ -16,14 +16,17 @@ from email.mime.text import MIMEText
 import mimetypes
 
 
+from PyQt4 import QtGui
+from PyQt4 import QtCore
+
+import httplib2
+
 from apiclient import errors
 from apiclient.discovery import build
 from oauth2client.client import flow_from_clientsecrets
 from oauth2client.file import Storage
 from oauth2client.tools import run
 
-from PyQt4 import QtGui
-from PyQt4 import QtCore
 
 class GAM:
   def __init__(self):
