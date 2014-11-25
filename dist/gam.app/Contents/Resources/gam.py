@@ -50,18 +50,20 @@ class GAM:
     print 'GET PROFILE'
     self.refresh()
 
-  def progress(self, width, percent):
-    sys.stdout.write ("SYNCHRONIZING [%s ]%d%%\r" % (('%%-%ds' % width) % (width * percent / 100 * '='), percent))
-    sys.stdout.flush()
+  #def progress(self, width, percent):
+    #sys.stdout.write ("SYNCHRONIZING [%s ]%d%%\r" % (('%%-%ds' % width) % (width * percent / 100 * '='), percent))
+    #sys.stdout.flush()
     
   def refreshToken(self, tid, service_thread, idlist_thread, idlist_json):
     index = 0
     length = len(idlist_thread) 
+    print "thread!"
     for lID in idlist_thread:
       index += 1
       if lID in idlist_json:
         continue
       msg = service_thread.users().messages().get(userId='me',id=lID).execute()
+      print "thread!"
       payload = msg['payload']
       lSnippet = msg['snippet']
       lFrom = ''
@@ -164,11 +166,9 @@ class GAM:
       thread.start()  
 
     while len(self.maillist) <= len(idlist_server):
-        self.progress(50,100 * len(self.maillist) / len(idlist_server))
-        if len(self.maillist) == len(idlist_server):
-          self.progress(50,100 * len(self.maillist) / len(idlist_server))
-          break
-    print
+      if len(self.maillist) == len(idlist_server):
+        break
+      #print len(self.maillist)
 
     
 
